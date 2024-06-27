@@ -6,7 +6,7 @@
     "@highlightjs/cdn-assets": "^10.7.3",
     "@popperjs/core": "^2.10.2",
     "blueimp-file-upload": "^10.31.0",
-    "bootstrap": "^5.0.2",
+    "bootstrap": "^5.3.3",
     "dompurify": "^2.3.3",
     "font-awesome": "^4.7.0",
     "gulp": "^4.0.2",
