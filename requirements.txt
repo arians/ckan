@@ -98,7 +98,7 @@ redis==3.5.3
     # via rq
 repoze.who==2.4
     # via -r requirements.in
-requests==2.26.0
+requests==2.32.4
     # via
     #   -r requirements.in
     #   pysolr
