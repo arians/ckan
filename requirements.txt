@@ -121,7 +121,7 @@ typing_extensions==4.0.0
     # via -r requirements.in
 tzlocal==3.0
     # via -r requirements.in
-urllib3==1.26.7
+urllib3==2.6.0
     # via requests
 watchdog==2.1.6
     # via werkzeug
