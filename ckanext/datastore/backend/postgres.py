@@ -6,6 +6,7 @@ from sqlalchemy.engine.base import Engine
 from ckan.types import Context, ErrorDict
 import copy
 import logging
+import re
 import sys
 from typing import (
     Any, Callable, Container, Dict, Iterable, Optional, Set, Union,
@@ -106,6 +107,16 @@ def identifier(s: str):
     Return s as a quoted postgres identifier
     """
     return u'"' + s.replace(u'"', u'""').replace(u'\0', '') + u'"'
+
+
+
+def _validate_identifier(identifier_value: str) -> None:
+    """
+    Validate that an identifier contains only safe characters.
+    Raises ValueError if validation fails.
+    """
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(identifier_value)):
+        raise ValueError("Invalid input")
 
 
 def get_read_engine():
@@ -292,6 +303,7 @@ def _get_fields(connection: Any, resource_id: str):
     return a list of {'id': column_name, 'type': column_type} dicts
     for the passed resource_id, excluding '_'-prefixed columns.
     '''
+    _validate_identifier(resource_id)
     fields: list[dict[str, Any]] = []
     all_fields = connection.execute(
         u'SELECT * FROM "{0}" LIMIT 1'.format(resource_id)
@@ -1202,6 +1214,7 @@ def upsert_data(context: Context, data_dict: dict[str, Any]):
             used_values = [record[field] for field in used_field_names]
 
             if method == _UPDATE:
+                _validate_identifier(data_dict['resource_id'])
                 sql_string = u'''
                     UPDATE "{res_id}"
                     SET ({columns}, "_full_text") = ({values}, NULL)
@@ -1232,6 +1245,7 @@ def upsert_data(context: Context, data_dict: dict[str, Any]):
                     })
 
             elif method == _UPSERT:
+                _validate_identifier(data_dict['resource_id'])
                 sql_string = u'''
                     UPDATE "{res_id}"
                     SET ({columns}, "_full_text") = ({values}, NULL)
@@ -1330,6 +1344,7 @@ def search_data(context: Context, data_dict: dict[str, Any]):
     # FIXME: Remove duplicates on select columns
     select_columns = ', '.join(query_dict['select']).replace('%', '%%')
     ts_query = cast(str, query_dict['ts_query']).replace('%', '%%')
+    _validate_identifier(data_dict['resource_id'])
     resource_id = data_dict['resource_id'].replace('%', '%%')
     sort = query_dict['sort']
     limit = query_dict['limit']
@@ -1517,6 +1532,7 @@ def delete_data(context: Context, data_dict: dict[str, Any]):
                                              fields_types, query_dict)
 
     where_clause, where_values = _where(query_dict['where'])
+    _validate_identifier(data_dict['resource_id'])
     sql_string = u'DELETE FROM "{0}" {1}'.format(
         data_dict['resource_id'],
         where_clause
@@ -1654,6 +1670,8 @@ def search_sql(context: Context, data_dict: dict[str, Any]):
 
     context['connection'] = engine.connect()
     timeout = context.get('query_timeout', _TIMEOUT)
+    if not isinstance(timeout, int):
+        raise ValueError("Invalid input")
     _cache_types(context['connection'])
 
     sql = data_dict['sql'].replace('%', '%%')
@@ -2098,6 +2116,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
         info: dict[str, Any] = {'meta': {}, 'fields': []}
 
         try:
+            _validate_identifier(id)
             engine = self._get_read_engine()
 
             # resource id for deferencing aliases
